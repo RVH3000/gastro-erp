@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gastro ERP – Warenkreislauf Management</title>
+  <link rel="stylesheet" href="src/css/variables.css">
+  <link rel="stylesheet" href="src/css/base.css">
+  <link rel="stylesheet" href="src/css/layout.css">
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="header-brand">
+      <h1>🍽️ Gastro ERP System</h1>
+      <p class="subtitle">Komplettes Warenwirtschaftssystem – Vom Wareneingang bis zur Inventur</p>
+    </div>
+    <div style="font-size:13px;color:var(--color-text-secondary)">
+      Steiermark · AT · RKSV-konform
+    </div>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav id="tab-nav" class="tab-nav" role="tablist" aria-label="ERP-Module">
+    <button class="tab-btn active" data-tab="einkauf"   role="tab" aria-selected="true"  tabindex="0">① Wareneingang</button>
+    <button class="tab-btn"        data-tab="mhd"       role="tab" aria-selected="false" tabindex="-1">② MHD-Tracking</button>
+    <button class="tab-btn"        data-tab="warenstand" role="tab" aria-selected="false" tabindex="-1">③ Warenstand</button>
+    <button class="tab-btn"        data-tab="menu"      role="tab" aria-selected="false" tabindex="-1">④ Menüentwicklung</button>
+    <button class="tab-btn"        data-tab="rezeptur"  role="tab" aria-selected="false" tabindex="-1">⑤ Rezeptur</button>
+    <button class="tab-btn"        data-tab="kalkulation" role="tab" aria-selected="false" tabindex="-1">⑥ Kalkulation</button>
+    <button class="tab-btn"        data-tab="inventur"  role="tab" aria-selected="false" tabindex="-1">⑦ Inventur</button>
+    <button class="tab-btn"        data-tab="konzept"   role="tab" aria-selected="false" tabindex="-1">📋 Konzept</button>
+    <button class="tab-btn"        data-tab="fallstricke" role="tab" aria-selected="false" tabindex="-1">⚠️ Fallstricke</button>
+  </nav>
+
+  <!-- ① Wareneingang -->
+  <div id="einkauf" class="tab-panel active" role="tabpanel">
+    <div class="module-section">
+      <h2><span class="module-number" aria-hidden="true">1</span> Einkauf &amp; Wareneingang</h2>
+      <p class="module-desc">
+        Erfassen Sie Wareneingänge mit Lieferant, Menge, Einkaufspreis und MHD.
+        Daten fließen automatisch in MHD-Tracking und Warenstand.
+      </p>
+
+      <div class="alert alert-info">
+        <strong>Best Practice:</strong> Erfassen Sie jeden Wareneingang unmittelbar bei Lieferung.
+      </div>
+
+      <form id="wi-form" novalidate>
+        <div class="grid">
+          <div class="form-group">
+            <label for="wi-lieferant">Lieferant</label>
+            <select id="wi-lieferant" name="lieferant">
+              <option value="">-- Lieferant wählen --</option>
+              <option>Metro Cash &amp; Carry</option>
+              <option>Transgourmet</option>
+              <option>Biohof Steiermark</option>
+              <option>Gemüse Müller</option>
+              <option>Fleischerei Karner</option>
+              <option>Käserei Alm</option>
+            </select>
+            <span class="field-error" data-error="lieferant"></span>
+          </div>
+          <div class="form-group">
+            <label for="wi-artikel">Artikel</label>
+            <select id="wi-artikel" name="artikel">
+              <option value="">-- Artikel wählen --</option>
+            </select>
+            <span class="field-error" data-error="artikel"></span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="form-group">
+            <label for="wi-menge">Menge</label>
+            <input type="number" id="wi-menge" name="menge" value="" step="0.001" min="0.001" placeholder="z.B. 5">
+            <span class="field-error" data-error="menge"></span>
+          </div>
+          <div class="form-group">
+            <label for="wi-preis">Einkaufspreis (€/Einheit)</label>
+            <input type="number" id="wi-preis" name="ekPreis" value="" step="0.01" min="0.01" placeholder="z.B. 12.50">
+            <span class="field-error" data-error="ekPreis"></span>
+          </div>
+          <div class="form-group">
+            <label for="wi-mhd">MHD</label>
+            <input type="date" id="wi-mhd" name="mhd">
+            <span class="field-error" data-error="mhd"></span>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Wareneingang buchen</button>
+        </div>
+      </form>
+
+      <h3 style="margin-top:28px;margin-bottom:12px">Letzte Wareneingänge</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Datum</th><th>Artikel / Charge</th><th>Lieferant</th>
+              <th>Menge</th><th>Wert</th><th>MHD</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="wi-tbody">
+            <tr><td colspan="7" class="empty-state">Lade Daten…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② MHD-Tracking -->
+  <div id="mhd" class="tab-panel" role="tabpanel" hidden>
+    <div class="module-section">
+      <h2><span class="module-number" aria-hidden="true">2</span> MHD-Datenbank &amp; Tracking</h2>
+      <p class="module-desc">FEFO-Prinzip: First Expired, First Out. Dynamische Berechnung ab heute.</p>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="mhd-stat-gesamt">–</div>
+          <div class="stat-label">Artikel im Bestand</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="mhd-stat-warnung">–</div>
+          <div class="stat-label">MHD &lt; 7 Tage</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="mhd-stat-kritisch">–</div>
+          <div class="stat-label">Kritische Artikel (&lt;3 Tage)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="mhd-stat-abgelaufen">–</div>
+          <div class="stat-label">Abgelaufen</div>
+        </div>
+      </div>
+
+      <div id="mhd-warn-banner" hidden></div>
+
+      <h3 style="margin-bottom:12px">MHD-Übersicht (FEFO-sortiert)</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Artikel</th><th>Kategorie</th><th>Bestand</th>
+              <th>MHD</th><th>Verbleibend</th><th>Status</th><th>Empfehlung</th>
+            </tr>
+          </thead>
+          <tbody id="mhd-tbody">
+            <tr><td colspan="7" class="empty-state">Lade Daten…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ Warenstand -->
+  <div id="warenstand" class="tab-panel" role="tabpanel" hidden>
+    <div class="module-section">
+      <h2><span class="module-number" aria-hidden="true">3</span> Aktueller Warenstand</h2>
+      <p class="module-desc">Echtzeit-Übersicht aller verfügbaren Lebensmittel nach Kategorien.</p>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="ws-wert">–</div>
+          <div class="stat-label">Warenwert gesamt</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="ws-positionen">–</div>
+          <div class="stat-label">Artikel-Positionen</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="ws-kategorien">–</div>
+          <div class="stat-label">Kategorien</div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom:12px">Bestandsübersicht nach Kategorien</h3>
+      <div class="grid" id="ws-kategorien-grid">
+        <div class="card skeleton" style="height:120px"></div>
+        <div class="card skeleton" style="height:120px"></div>
+        <div class="card skeleton" style="height:120px"></div>
+        <div class="card skeleton" style="height:120px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ Menüentwicklung -->
+  <div id="menu" class="tab-panel" role="tabpanel" hidden>
+    <div class="module-section">
+      <h2><span class="module-number" aria-hidden="true">4</span> Spontane Menüentwicklung</h2>
+      <p class="module-desc">
+        Vorschläge basierend auf aktuellem Warenbestand.
+        Priorisierung nach kritischen MHD-Artikeln (FEFO-Logik).
+      </p>
+
+      <div class="actions">
+        <button id="btn-neues-menu" class="btn btn-primary">🎲 Neue Vorschläge generieren</button>
+      </div>
+
+      <div id="menu-vorschlaege" style="margin-top:20px">
+        <div class="skeleton" style="height:100px;margin-bottom:12px"></div>
+        <div class="skeleton" style="height:100px;margin-bottom:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ Rezeptur -->
+  <div id="rezeptur" class="tab-panel" role="tabpanel" hidden>
+    <div class="module-section">
+      <h2><span class="module-number" aria-hidden="true">5</span> Spontane Rezeptur</h2>
+      <p class="module-desc">Kalkulation basierend auf aktuellen Einkaufspreisen aus dem Warenstand.</p>
+
+      <div class="alert alert-info">
+        Wählen Sie ein Rezept aus oder erstellen Sie eine neue Rezeptur. Die Kalkulation erfolgt live.
+      </div>
+
+      <h3 style="margin-bottom:12px">Gespeicherte Rezepturen</h3>
+      <div id="rezeptur-liste" class="grid">
+        <p style="color:var(--color-text-secondary);font-size:14px">Lade Rezepturen…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ Kalkulation -->
+  <div id="kalkulation" class="tab-panel" role="tabpanel" hidden>
+    <div class="module-section">
+      <h2><span class="module-number" aria-hidden="true">6</span> Kalkulation</h2>
+      <p class="module-desc">Duale Strategie: Planungskalkulation (33% Ziel) + Kassenkalkulation (Ist-Analyse).</p>
+
+      <div class="sub-tab-nav">
+        <button class="tab-btn active" data-subtab="plan">Planungskalkulation</button>
+        <button class="tab-btn"        data-subtab="kasse">Kassenkalkulation</button>
+      </div>
+
+      <!-- Planung -->
+      <div data-subpanel="plan" class="sub-tab-panel active">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">33%</div>
+            <div class="stat-label">Ziel-Wareneinsatz</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">67%</div>
+            <div class="stat-label">Ziel-Deckungsbeitrag</div>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr><th>Gericht</th><th>Kategorie</th><th>WE/Portion</th><th>Empf. VK</th><th>WE%</th><th>Abw.</th></tr>
+            </thead>
+            <tbody id="kal-plan-tbody">
+              <tr><td colspan="6" class="empty-state">Lade…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="calculation-box" style="margin-top:20px;max-width:480px">
+          <h4 style="margin-bottom:16px">Schnell-Kalkulator</h4>
+          <div class="form-group">
+            <label for="kal-we-input">Wareneinsatz pro Portion (€)</label>
+            <input type="number" id="kal-we-input" value="9.50" step="0.01" min="0">
+          </div>
+          <div class="calculation-row">
+            <span>VK (netto)</span>
+            <span id="kal-vk-netto">–</span>
+          </div>
+          <div class="calculation-row">
+            <span>VK (brutto, 10% USt)</span>
+            <span id="kal-vk-brutto">–</span>
+          </div>
+          <div class="calculation-row total">
+            <span>Empf. VK (gerundet)</span>
+            <span id="kal-vk-gerundet" style="color:var(--color-success)">–</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kasse -->
+      <div data-subpanel="kasse" class="sub-tab-panel">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="kasse-umsatz">–</div>
+            <div class="stat-label">Gesamtumsatz</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="kasse-verbrauch">–</div>
+            <div class="stat-label">Warenverbrauch</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="kasse-ist-we">–</div>
+            <div class="stat-label">Ist-Wareneinsatz</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="kasse-db">–</div>
+            <div class="stat-label">Deckungsbeitrag</div>
+          </div>
+        </div>
+        <div class="calculation-row" style="padding:12px 0">
+          <span>Abweichung zu Zielvorgabe (33%)</span>
+          <span id="kasse-abw" class="badge">–</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ Inventur -->
+  <div id="inventur" class="tab-panel" role="tabpanel" hidden>
+    <div class="module-section">
+      <h2><span class="module-number" aria-hidden="true">7</span> Inventur &amp; Kontrolle</h2>
+      <p class="module-desc">Systematischer Soll-Ist-Abgleich mit Schwund-Analyse und Bestandskorrektur.</p>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="inv-soll-wert">–</div>
+          <div class="stat-label">Soll-Warenbestand (System)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="inv-ist-wert">–</div>
+          <div class="stat-label">Ist-Warenbestand (gezählt)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="inv-differenz">–</div>
+          <div class="stat-label">Inventurdifferenz</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="inv-schwund-pct">–</div>
+          <div class="stat-label">Schwund-Quote</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btn-inventur-start" class="btn btn-primary">Inventur starten</button>
+      </div>
+
+      <div id="inv-eingabe" hidden style="margin-top:20px"></div>
+
+      <div id="inv-ergebnis" hidden style="margin-top:24px">
+        <h3 style="margin-bottom:12px">Inventur-Ergebnis</h3>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Artikel</th><th>Soll</th><th>Ist</th>
+                <th>Differenz</th><th>EK-Preis</th><th>Wert-Diff.</th>
+              </tr>
+            </thead>
+            <tbody id="inv-diff-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📋 Konzept (statischer Inhalt) -->
+  <div id="konzept" class="tab-panel" role="tabpanel" hidden>
+    <div class="module-section">
+      <h2>📋 Gesamtkonzept</h2>
+      <p class="module-desc">Software-Planungskonzept: Integrierter Gastronomie-Warenkreislauf</p>
+
+      <div class="alert alert-success">
+        <strong>Geschlossener Workflow:</strong> Wareneingang → MHD-Tracking → Warenstand → Menüentwicklung → Rezeptur → Kalkulation → Inventur → zurück zu Einkauf.
+      </div>
+
+      <div class="grid" style="margin-top:16px">
+        <div class="card">
+          <h3>Technische Basis</h3>
+          <ul style="margin-top:8px;font-size:14px;line-height:1.8;list-style:none">
+            <li>• Vanilla JS ES-Module (kein Framework-Lock-in)</li>
+            <li>• Zentrale Store-Architektur (Single Source of Truth)</li>
+            <li>• localStorage-Persistenz (kein Server erforderlich)</li>
+            <li>• Event-driven: CustomEvents statt direkter Modul-Kopplung</li>
+            <li>• FEFO-Algorithmus für Chargenmanagement</li>
+            <li>• RKSV-bereit (Österreich)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Berechnungsformeln</h3>
+          <ul style="margin-top:8px;font-size:14px;line-height:1.8;list-style:none">
+            <li>• Warenstand: Zugänge − Verbrauch</li>
+            <li>• Rezept-WE: Σ(Menge × EK-Preis) / Portionen</li>
+            <li>• Plan-VK: WE / 0,33 × 1,10 (inkl. 10% USt)</li>
+            <li>• Ist-WE%: (Verbrauch / Umsatz) × 100</li>
+            <li>• Schwund: (Soll − Ist) / Soll × 100</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Österreich-Spezifisch</h3>
+          <ul style="margin-top:8px;font-size:14px;line-height:1.8;list-style:none">
+            <li>• 10% USt für Gastronomie</li>
+            <li>• RKSV-Konformität (Signatursystem)</li>
+            <li>• Lokale Lieferanten (Metro, Transgourmet, Biohöfe)</li>
+            <li>• de-AT Formatierung (€, Datum, Dezimaltrenner)</li>
+            <li>• Steiermark-Fokus: regionale Küche</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 style="margin-top:24px;margin-bottom:12px">Etablierte Lösungen (Österreich)</h3>
+      <div class="grid">
+        <div class="card"><h4>GMS IT GmbH</h4><p style="font-size:13px">gms.info – GMS Waren Control</p></div>
+        <div class="card"><h4>TiPOS</h4><p style="font-size:13px">tipos.at – Größter österr. Anbieter</p></div>
+        <div class="card"><h4>FoodNotify</h4><p style="font-size:13px">foodnotify.com – Rezeptur &amp; Kalkulation</p></div>
+        <div class="card"><h4>bonit.at</h4><p style="font-size:13px">bonit.at – BONit FlexX PRO (lokale Datenhaltung)</p></div>
+        <div class="card"><h4>Apicbase</h4><p style="font-size:13px">apicbase.com – Systemgastronomie</p></div>
+        <div class="card"><h4>MEINbusiness</h4><p style="font-size:13px">meinbusiness.biz – 3,2 Mio. Rezepte</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚠️ Fallstricke -->
+  <div id="fallstricke" class="tab-panel" role="tabpanel" hidden>
+    <div class="module-section">
+      <h2>⚠️ Fallstricke &amp; Risiken</h2>
+      <p class="module-desc">12 kritische Problembereiche – 26-55% aller ERP-Implementierungen scheitern.</p>
+
+      <div class="alert alert-warning">
+        <strong>Empfehlung:</strong> MVP-Ansatz – Top 5 kritische Risiken zuerst lösen, dann iterativ erweitern.
+        Erfolgswahrscheinlichkeit: 65-75% vs. 25-30% bei "Big Bang"-Implementierung.
+      </div>
+
+      <!-- Risiko-Matrix -->
+      <h3 style="margin-top:20px;margin-bottom:12px">Risiko-Matrix</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr><th>#</th><th>Risiko</th><th>Wahrscheinlichkeit</th><th>Auswirkung</th><th>Score</th><th>Priorität</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Manuelle Eingabefehler</td><td>95%</td><td>Hoch</td><td>9/10</td><td><span class="badge badge-danger">KRITISCH</span></td></tr>
+            <tr><td>2</td><td>Echtzeit-Sync-Lücken</td><td>70%</td><td>Sehr Hoch</td><td>9/10</td><td><span class="badge badge-danger">KRITISCH</span></td></tr>
+            <tr><td>3</td><td>MHD-Tracking-Versagen</td><td>60%</td><td>Hoch</td><td>7/10</td><td><span class="badge badge-danger">KRITISCH</span></td></tr>
+            <tr><td>4</td><td>Mitarbeiter-Sabotage</td><td>80%</td><td>Sehr Hoch</td><td>10/10</td><td><span class="badge badge-danger">KRITISCH</span></td></tr>
+            <tr><td>5</td><td>Unzureichendes Training</td><td>85%</td><td>Sehr Hoch</td><td>9/10</td><td><span class="badge badge-danger">KRITISCH</span></td></tr>
+            <tr><td>6</td><td>Legacy-Integration</td><td>90%</td><td>Hoch</td><td>8/10</td><td><span class="badge badge-warning">HOCH</span></td></tr>
+            <tr><td>7</td><td>Performance-Degradation</td><td>50%</td><td>Mittel</td><td>5/10</td><td><span class="badge badge-warning">MITTEL</span></td></tr>
+            <tr><td>8</td><td>RKSV-Compliance (AT)</td><td>40%</td><td>Sehr Hoch</td><td>7/10</td><td><span class="badge badge-warning">HOCH</span></td></tr>
+            <tr><td>9</td><td>HACCP-Dokumentation</td><td>30%</td><td>Hoch</td><td>5/10</td><td><span class="badge badge-warning">MITTEL</span></td></tr>
+            <tr><td>10</td><td>Starre 33%-Zielvorgabe</td><td>70%</td><td>Mittel</td><td>6/10</td><td><span class="badge badge-warning">MITTEL</span></td></tr>
+            <tr><td>11</td><td>Schwund &amp; Diebstahl</td><td>75%</td><td>Hoch</td><td>7/10</td><td><span class="badge badge-warning">HOCH</span></td></tr>
+            <tr><td>12</td><td>Spontane Menüs → Food Waste</td><td>45%</td><td>Mittel</td><td>4/10</td><td><span class="badge badge-success">NIEDRIG</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="calculation-box" style="margin-top:20px">
+        <h4>Budget-Empfehlung (MVP)</h4>
+        <div class="calculation-row"><span>Change Management &amp; Training (Problem 4+5)</span><span>30%</span></div>
+        <div class="calculation-row"><span>Datenqualitäts-Automatisierung (Problem 1+2)</span><span>25%</span></div>
+        <div class="calculation-row"><span>MHD-System mit Chargen-Tracking (Problem 3)</span><span>15%</span></div>
+        <div class="calculation-row"><span>Legacy-Integration (Problem 6)</span><span>20%</span></div>
+        <div class="calculation-row total"><span>Compliance &amp; Monitoring (Problem 8+11)</span><span>10%</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast-Container -->
+<div id="toast-container" aria-live="polite"></div>
+
+<script type="module" src="src/js/app.js"></script>
+</body>
+</html>
