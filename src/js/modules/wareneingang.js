@@ -83,7 +83,10 @@ function renderTabelle(tbody) {
     return;
   }
 
-  const html = [...chargen].reverse().slice(0, 20).map(c => {
+  // Wareneingang-Tabelle: neueste Buchungen zuerst (nach Eingabedatum)
+  const html = [...chargen]
+    .sort((a, b) => new Date(b.datum) - new Date(a.datum) || b.id.localeCompare(a.id))
+    .slice(0, 20).map(c => {
     const artikel = Store.getArtikelById(c.artikelId);
     const status  = Store.getMhdStatus(c.mhd);
     return `
