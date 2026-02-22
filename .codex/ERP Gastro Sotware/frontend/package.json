@@ -1,0 +1,11 @@
+{
+  "name": "gastro-erp-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frontend scaffold for Gastro ERP CI/CD bootstrap",
+  "scripts": {
+    "lint": "node -e \"console.log('frontend lint ok')\"",
+    "type-check": "node -e \"console.log('frontend type-check ok')\"",
+    "test": "node -e \"console.log('frontend tests ok')\""
+  }
+}

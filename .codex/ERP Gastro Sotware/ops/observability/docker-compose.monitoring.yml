@@ -1,0 +1,59 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--config.expand-env"
+    environment:
+      ALERTMANAGER_SLACK_URL: "${ALERTMANAGER_SLACK_URL:-}"
+      ALERTMANAGER_WHATSAPP_URL: "${ALERTMANAGER_WHATSAPP_URL:-}"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+  loki:
+    image: grafana/loki:3.3.2
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/config.yml"]
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    ports:
+      - "9100:9100"

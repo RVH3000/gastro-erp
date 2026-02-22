@@ -1,0 +1,47 @@
+groups:
+  - name: gastro-erp-slo
+    rules:
+      - alert: BackendTargetDown
+        expr: up{job="gastro-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend target down"
+          description: "Prometheus cannot scrape backend metrics endpoint."
+
+      - alert: HighErrorRate
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) > 0.01
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate above 1% for 10m"
+          description: "Rollback should be evaluated immediately."
+
+      - alert: HighP95Latency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 above 1 second"
+          description: "Investigate backend latency and database health."
+
+      - alert: RKSVSigningFailures
+        expr: increase(gastro_fiscal_sign_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RKSV signing failure detected"
+          description: "Critical fiscal operation failed. Stop release and investigate provider."
+
+      - alert: BmdExportJobFailed
+        expr: increase(gastro_bmd_export_failed_total[15m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "BMD export failed"
+          description: "Investigate export worker and retry policy."
