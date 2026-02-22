@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: Gastro ERP Integrations API
+  version: v1
+paths:
+  /v1/integrations/pos/events:
+    post:
+      summary: Ingest POS event with idempotency
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+      responses:
+        "202":
+          description: Accepted
+  /v1/integrations/fiscal/sign:
+    post:
+      summary: Sign fiscal payload (RKSV, A-Trust provider-ready)
+      parameters:
+        - in: query
+          name: dry_run
+          required: false
+          schema:
+            type: boolean
+          description: Build and validate sign request without external call.
+      responses:
+        "200":
+          description: Signed payload metadata
+  /v1/integrations/fiscal/dep-export:
+    post:
+      summary: Generate DEP export payload
+      responses:
+        "200":
+          description: DEP export generated
+  /v1/integrations/fiscal/jahresbeleg:
+    post:
+      summary: Generate annual receipt payload (Jahresbeleg)
+      responses:
+        "200":
+          description: Annual receipt generated
+  /v1/integrations/accounting/exports/bmd:
+    post:
+      summary: Start BMD export (optional module, disabled by default)
+      responses:
+        "200":
+          description: Export queued
+        "503":
+          description: BMD module disabled
+  /v1/integrations/accounting/exports/{id}:
+    get:
+      summary: Get BMD export status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Export status

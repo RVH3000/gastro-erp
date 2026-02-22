@@ -1,0 +1,174 @@
+name: CI PR
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+
+jobs:
+  policy-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Conventional PR Title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${PR_TITLE}" =~ ^(feat|fix|chore|docs|refactor|test|build|ci|perf)(\(.+\))?:\ .+ ]]; then
+            echo "PR title must follow Conventional Commits"
+            exit 1
+          fi
+      - name: Ensure CODEOWNERS exists
+        run: test -f .github/CODEOWNERS
+
+  lint-type-test:
+    runs-on: ubuntu-latest
+    needs: policy-gate
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: gastrodb_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d gastrodb_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Backend lint/type/test
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/gastrodb_test
+          REDIS_URL: redis://localhost:6379
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          alembic -c alembic.ini upgrade head
+          ruff check .
+          mypy app adapters config
+          pytest --cov=app --cov=adapters --cov-report=xml --cov-fail-under=80
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Frontend lint/type/test
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run lint
+          npm run type-check
+          npm run test
+
+  security-gates:
+    runs-on: ubuntu-latest
+    needs: policy-gate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Secret scanning (gitleaks)
+        uses: zricethezav/gitleaks-action@v2.3.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python dependency audit
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          pip-audit -r requirements.txt --ignore-vuln GHSA-w596-4wvx-j9j6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Node dependency audit
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          npm audit --audit-level=high
+
+      - name: Filesystem vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+  integration-contract:
+    runs-on: ubuntu-latest
+    needs: [lint-type-test, security-gates]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run contract tests for supplier adapters
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pytest tests/contracts -q
+
+  e2e-core-flows:
+    runs-on: ubuntu-latest
+    needs: [integration-contract]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install E2E dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Execute core flow E2E tests
+        run: npm run test:e2e

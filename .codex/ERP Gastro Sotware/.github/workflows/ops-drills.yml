@@ -1,0 +1,48 @@
+name: Ops Drills
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 1 */3 *"
+
+permissions:
+  contents: read
+
+jobs:
+  backup-restore-drill:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run backup/restore drill on production host
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/gastro-erp
+            export DATABASE_URL="${{ secrets.PROD_DATABASE_URL }}"
+            chmod +x deploy/scripts/backup.sh deploy/scripts/backup_restore_drill.sh
+            ./deploy/scripts/backup_restore_drill.sh
+
+  rollback-drill:
+    runs-on: ubuntu-latest
+    needs: backup-restore-drill
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run rollback drill on production host
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/gastro-erp
+            export DRILL_CONFIRMED=true
+            export HEALTH_URL="http://localhost/api/v1/health"
+            chmod +x deploy/scripts/rollback.sh deploy/scripts/rollback_drill.sh
+            ./deploy/scripts/rollback_drill.sh

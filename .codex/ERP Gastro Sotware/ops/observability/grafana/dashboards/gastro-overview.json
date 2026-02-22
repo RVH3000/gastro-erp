@@ -1,0 +1,56 @@
+{
+  "id": null,
+  "uid": "gastro-overview",
+  "title": "Gastro ERP Overview",
+  "tags": ["gastro", "slo"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "HTTP Error Rate (5xx)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+          "legendFormat": "error-rate"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP p95 Duration",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "RKSV Signing Failures (15m)",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "increase(gastro_fiscal_sign_failures_total[15m])",
+          "legendFormat": "fails"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "BMD Export Failures (15m)",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {
+          "expr": "increase(gastro_bmd_export_failed_total[15m])",
+          "legendFormat": "fails"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s"
+}

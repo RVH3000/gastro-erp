@@ -1,0 +1,13 @@
+# Default owners (replace with real GitHub handles)
+* @gastro-erp/platform
+
+# CI/CD and infrastructure
+/.github/workflows/ @gastro-erp/platform @gastro-erp/devops
+/deploy/ @gastro-erp/platform @gastro-erp/devops
+/ops/ @gastro-erp/platform @gastro-erp/devops
+
+# Backend and integrations
+/backend/ @gastro-erp/backend @gastro-erp/integrations
+
+# Documentation
+/docs/ @gastro-erp/platform @gastro-erp/product

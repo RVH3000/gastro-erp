@@ -1,0 +1,94 @@
+name: Repo Hardening Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  audit-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify mandatory governance files
+        run: |
+          set -euo pipefail
+          test -f .github/CODEOWNERS
+          test -f .github/pull_request_template.md
+          test -f SECURITY.md
+          test -f docs/process/branch-protection.md
+          test -f docs/process/repo-hardening-checklist.md
+          test -f docs/process/github-environments-secrets.md
+          echo "Mandatory governance files present."
+
+      - name: Verify required staging secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          STAGING_BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for secret_name in DATABASE_URL JWT_SECRET REDIS_URL SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD DB_PASSWORD GRAFANA_PASSWORD STAGING_HOST STAGING_SSH_KEY STAGING_BASE_URL; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "Missing required staging secret: ${secret_name}"
+              missing=1
+            fi
+          done
+          if [[ "${missing}" -ne 0 ]]; then
+            exit 1
+          fi
+          echo "Required staging secrets are set."
+
+  audit-production:
+    runs-on: ubuntu-latest
+    environment: production
+    needs: audit-staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify required production secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          ATRUST_API_KEY: ${{ secrets.ATRUST_API_KEY }}
+          ATRUST_CERT_PEM: ${{ secrets.ATRUST_CERT_PEM }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for secret_name in DATABASE_URL JWT_SECRET REDIS_URL SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD DB_PASSWORD GRAFANA_PASSWORD PROD_HOST PROD_SSH_KEY; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "Missing required production secret: ${secret_name}"
+              missing=1
+            fi
+          done
+          if [[ "${missing}" -ne 0 ]]; then
+            exit 1
+          fi
+          if [[ -z "${ATRUST_API_KEY}" || -z "${ATRUST_CERT_PEM}" ]]; then
+            echo "Warning: A-Trust secrets not set yet (RKSV live mode will not work)."
+          fi
+          echo "Required production secrets are set."

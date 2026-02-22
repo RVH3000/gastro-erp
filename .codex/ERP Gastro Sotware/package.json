@@ -1,0 +1,14 @@
+{
+  "name": "gastro-erp-repo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gastro ERP CI/CD + E2E bootstrap",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1",
+    "typescript": "^5.7.3"
+  }
+}
