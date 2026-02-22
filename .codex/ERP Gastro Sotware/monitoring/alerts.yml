@@ -1,0 +1,29 @@
+groups:
+  - name: gastro-erp-core-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 0.001)) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error-Rate > 1%"
+          description: "Die 5xx-Rate liegt ueber 1% im 5-Minuten-Fenster."
+
+      - alert: SlowQueries
+        expr: pg_stat_activity_max_tx_duration > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB-Query > 1s"
+          description: "Mindestens eine laufende PostgreSQL-Transaktion dauert laenger als 1 Sekunde."
+
+      - alert: MHDCriticalItems
+        expr: gastro_mhd_critical_count > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Zu viele MHD-kritische Artikel"
+          description: "Mehr als 5 Artikel befinden sich im kritischen MHD-Bereich."
