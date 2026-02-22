@@ -34,37 +34,15 @@
     },
     {
       "type": "timeseries",
-      "title": "DB-Query-Zeit p95",
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "title": "Response-Time p95",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(gastro_db_query_duration_seconds_bucket[5m])) by (le))",
-          "legendFormat": "db_query_p95",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "response_time_p95",
           "refId": "A"
         }
       ]
-    },
-    {
-      "type": "stat",
-      "title": "Aktive Sessions",
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
-      "targets": [
-        {
-          "expr": "gastro_active_sessions",
-          "legendFormat": "active_sessions",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value"
-      }
     }
   ]
 }
