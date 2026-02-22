@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: "Gastro ERP"
+    orgId: 1
+    folder: "Gastro ERP"
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

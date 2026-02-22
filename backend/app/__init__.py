@@ -1,0 +1,1 @@
+"""Gastro ERP backend package."""

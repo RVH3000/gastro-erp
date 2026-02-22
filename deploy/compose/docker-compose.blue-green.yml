@@ -1,0 +1,67 @@
+services:
+  backend_a:
+    image: ${BACKEND_IMAGE:-ghcr.io/example/gastro-erp/backend}@${BACKEND_IMAGE_DIGEST}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      SLOT: a
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: ${REDIS_URL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GRAFANA_PASSWORD: ${GRAFANA_PASSWORD}
+      ATRUST_API_KEY: ${ATRUST_API_KEY:-}
+      ATRUST_CERT_PEM: ${ATRUST_CERT_PEM:-}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  backend_b:
+    image: ${BACKEND_IMAGE:-ghcr.io/example/gastro-erp/backend}@${BACKEND_IMAGE_DIGEST}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      SLOT: b
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: ${REDIS_URL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GRAFANA_PASSWORD: ${GRAFANA_PASSWORD}
+      ATRUST_API_KEY: ${ATRUST_API_KEY:-}
+      ATRUST_CERT_PEM: ${ATRUST_CERT_PEM:-}
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  migrator:
+    image: ${BACKEND_IMAGE:-ghcr.io/example/gastro-erp/backend}@${BACKEND_IMAGE_DIGEST}
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/upstream.conf:/etc/nginx/conf.d/upstream.conf:rw
+    depends_on:
+      - backend_a
+      - backend_b

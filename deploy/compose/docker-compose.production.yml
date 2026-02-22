@@ -1,0 +1,58 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/example/gastro-erp/backend}@${BACKEND_IMAGE_DIGEST}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: ${REDIS_URL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GRAFANA_PASSWORD: ${GRAFANA_PASSWORD}
+      ATRUST_API_KEY: ${ATRUST_API_KEY:-}
+      ATRUST_CERT_PEM: ${ATRUST_CERT_PEM:-}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gastrodb}
+      POSTGRES_USER: ${POSTGRES_USER:-gastro}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gastro} -d ${POSTGRES_DB:-gastrodb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redis_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:

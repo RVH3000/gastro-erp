@@ -1,0 +1,60 @@
+name: Deploy Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_digest:
+        description: "Backend image digest (sha256:...)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to staging host via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: deploy
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          envs: DATABASE_URL,JWT_SECRET,REDIS_URL,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASSWORD,DB_PASSWORD,GRAFANA_PASSWORD
+          script: |
+            set -euo pipefail
+            cd /opt/gastro-erp
+            export BACKEND_IMAGE_DIGEST="${{ github.event.inputs.image_digest }}"
+            export APP_ENV="staging"
+            chmod +x deploy/scripts/deploy_staging.sh
+            ./deploy/scripts/deploy_staging.sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install E2E dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E core flows against staging
+        env:
+          BASE_URL: ${{ secrets.STAGING_BASE_URL }}
+        run: |
+          set -euo pipefail
+          npm run test:e2e
